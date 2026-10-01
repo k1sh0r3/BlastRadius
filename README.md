@@ -5,6 +5,8 @@ Column-level data lineage that runs **100% in the browser**. Drop in a dbt
 upstream chain and downstream **blast radius**. No backend, no API keys, no
 uploads — your warehouse schema never leaves your machine.
 
+Live Site: https://k1sh0r3.github.io/BlastRadius/
+
 ## Run it
 
 No build step. Serve the folder (it must be served over HTTP for `fetch()` of the
