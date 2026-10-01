@@ -71,6 +71,22 @@ const tests = [
       assert(!info.ambiguous, 'spurious ambiguity flag');
     },
   },
+  {
+    name: 'mysql/sqlite: dotted table names are dequalified before parsing',
+    fn() {
+      for (const dialect of ['mysql', 'sqlite']) {
+        const project = engine.buildFromSqlFiles([
+          { name: 'a.sql', sql: 'select id, amount from raw_src' },
+          { name: 'b.sql', sql: 'select x.id, y.amount * 2 as d from "db"."sch"."a" x join a y on x.id = y.id' },
+        ], dialect);
+        const lin = engine.buildColumnLineage(project, dialect);
+        assert(!lin.parseErrors.length, dialect + ' parse errors: ' + JSON.stringify(lin.parseErrors));
+        // qualified column refs (x.id, y.amount) must survive dequalification
+        assert.deepStrictEqual(inputKeys(lin, 'model.raw.b', 'id'), ['model.raw.a::id'], dialect);
+        assert.deepStrictEqual(inputKeys(lin, 'model.raw.b', 'd'), ['model.raw.a::amount'], dialect);
+      }
+    },
+  },
 ];
 
 module.exports = { tests };
