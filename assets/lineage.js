@@ -27,6 +27,21 @@
       return null;
     }
     function outKey(nodeId, col) { return nodeId + '::' + norm(col); }
+    // The vendored parser's mysql/sqlite grammars reject dotted table names
+    // ("db"."schema"."tbl"), which dbt compiled SQL always has. Rewrite
+    // FROM/JOIN table references to their bare final part before parsing;
+    // the engine resolves bare names through its index anyway. Column
+    // references are never directly preceded by FROM/JOIN, so they are safe.
+    function dequalifyTables(sql, dialect) {
+      if (dialect !== 'mysql' && dialect !== 'sqlite') return sql;
+      const part = '(?:"[^"]*"|`[^`]*`|\\[[^\\]]*\\]|\\w+)';
+      const re = new RegExp('((?:from|join)\\s+)(' + part + '(?:\\s*\\.\\s*' + part + ')+)', 'gi');
+      const partRe = new RegExp(part, 'g');
+      return sql.replace(re, (m, kw, name) => {
+        const bits = name.match(partRe);
+        return kw + bits[bits.length - 1];
+      });
+    }
 
     /* ---------------- manifest parsing ---------------- */
     const MODEL_KINDS = { model: 'model', seed: 'seed', snapshot: 'snapshot' };
@@ -320,7 +335,7 @@
 
       for (const [id, node] of project.nodes) {
         if (node.kind === 'source') continue;
-        const sql = (node.compiledSql || '').trim();
+        const sql = dequalifyTables((node.compiledSql || '').trim(), dialect || 'bigquery');
         if (!sql) continue;
         let ast;
         try {
@@ -479,7 +494,7 @@
       for (const [id, node] of project.nodes) {
         if (node.kind !== 'model') continue;
         try {
-          const ast = parser.parse(node.compiledSql, { database: dialect || 'bigquery' }).ast;
+          const ast = parser.parse(dequalifyTables(node.compiledSql, dialect || 'bigquery'), { database: dialect || 'bigquery' }).ast;
           const cteNames = new Set();
           (function collectCtes(n) {
             if (!n || typeof n !== 'object') return;
