@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BlastRadius — Know what breaks before you change it.</title>
+<meta name="description" content="BlastRadius: in-browser column-level data lineage. Upload a dbt manifest.json or SQL files, trace any column upstream, and see its blast radius downstream.">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b1026'/><text x='50' y='70' font-size='52' text-anchor='middle' fill='%23ff6b6b' font-family='monospace' font-weight='bold'>B</text></svg>">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand">
+      <span class="logo">B</span>
+      <div>
+        <h1>BlastRadius</h1>
+        <p class="tagline">Know what breaks before you change it.</p>
+      </div>
+    </div>
+    <nav><a href="about.html">How it works</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- upload view -->
+  <section id="view-upload" class="hero">
+    <h2>Column-level lineage, <span class="boom">without the platform</span>.</h2>
+    <p>Drop in a dbt <code>manifest.json</code> or a folder of <code>.sql</code> files.
+       BlastRadius maps every column to its upstream sources and shows you the
+       blast radius of any change — all in your browser, nothing uploaded.</p>
+    <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Drop files here">
+      <div class="big">Drop manifest.json or .sql files here</div>
+      <div class="dim">or click to browse — files never leave your machine</div>
+      <input type="file" id="fileInput" accept=".json,.sql" multiple hidden>
+    </div>
+    <div class="row">
+      <label class="muted" for="dialect">SQL dialect
+        <select id="dialect">
+          <option value="bigquery" selected>BigQuery</option>
+          <option value="snowflake">Snowflake</option>
+          <option value="postgres">Postgres</option>
+          <option value="mysql">MySQL</option>
+          <option value="sqlite">SQLite</option>
+          <option value="trino">Trino</option>
+        </select>
+      </label>
+      <button class="btn primary" id="demoBtn">Try the demo project</button>
+    </div>
+    <p class="privacy">🔒 100% client-side. Your SQL is parsed locally — no backend, no tracking, no uploads.</p>
+    <p class="error" id="uploadError" hidden></p>
+  </section>
+
+  <!-- app view -->
+  <section id="view-app" hidden>
+    <div class="toolbar">
+      <strong id="projectName">project</strong>
+      <span class="badge" id="dialectBadge">bigquery</span>
+      <span class="badge" id="statBadge">–</span>
+      <span class="spacer"></span>
+      <button class="btn" id="exportBtn">Export JSON</button>
+      <button class="btn" id="resetBtn">New analysis</button>
+    </div>
+    <div class="app">
+      <aside class="sidebar">
+        <h3>Models &amp; sources</h3>
+        <input type="search" id="modelSearch" placeholder="Search…" autocomplete="off">
+        <div id="modelList"></div>
+      </aside>
+      <div>
+        <div class="graph-wrap" id="graphWrap">
+          <svg id="graph" role="img" aria-label="Lineage graph"></svg>
+        </div>
+        <div class="graph-legend">
+          <span><span class="dot sel"></span>selected</span>
+          <span><span class="dot up"></span>upstream</span>
+          <span><span class="dot blast"></span>blast radius</span>
+          <span style="margin-left:auto" id="graphHint">Click a model, then a column, to trace it.</span>
+        </div>
+      </div>
+      <aside class="panel-right" id="panel">
+        <h3>Inspector</h3>
+        <div id="panelBody"><p class="muted">Select a model to see its columns.</p></div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>BlastRadius</strong> — column-level lineage in your browser. Best-effort parsing: where certainty is impossible, unknowns are shown, never faked.</p>
+  </div>
+</footer>
+
+<script src="assets/vendor/node-sql-parser.umd.js"></script>
+<script src="assets/lineage.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

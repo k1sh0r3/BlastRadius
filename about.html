@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How it works — BlastRadius</title>
+<link rel="stylesheet" href="assets/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230b1026'/><text x='50' y='70' font-size='52' text-anchor='middle' fill='%23ff6b6b' font-family='monospace' font-weight='bold'>B</text></svg>">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <div class="brand">
+      <span class="logo">B</span>
+      <div>
+        <h1>BlastRadius</h1>
+        <p class="tagline">Know what breaks before you change it.</p>
+      </div>
+    </div>
+    <nav><a href="index.html">Analyzer</a></nav>
+  </div>
+</header>
+
+<main class="wrap article">
+  <h2>How it works</h2>
+  <p>BlastRadius answers two questions about your data warehouse, at <strong>column</strong> level:</p>
+  <ol>
+    <li><strong>Upstream:</strong> where does this column actually come from?</li>
+    <li><strong>Blast radius:</strong> if I change or drop this column, what breaks downstream?</li>
+  </ol>
+
+  <h3>Inputs</h3>
+  <p>Two ways in:</p>
+  <ul>
+    <li><strong>dbt <code>manifest.json</code></strong> — drop the artifact from <code>dbt compile</code> or <code>dbt docs generate</code>. BlastRadius parses the compiled SQL of every model, seed, and snapshot, plus source definitions.</li>
+    <li><strong>Raw <code>.sql</code> files</strong> — one model per file; the filename becomes the model name. Cross-file references resolve against each other; anything unresolvable is shown as an unknown node.</li>
+  </ul>
+
+  <h3>What it understands</h3>
+  <ul>
+    <li>Column renames (<code>id AS customer_id</code>) traced through the rename.</li>
+    <li>Expressions (<code>amount_cents / 100.0</code>) — every referenced column is a dependency.</li>
+    <li>CTEs, joins with aliases, derived tables, scalar subqueries.</li>
+    <li><code>SELECT *</code> — expanded against known upstream columns, and every link it creates is flagged <em>via *</em> so you know it's a star dependency.</li>
+  </ul>
+
+  <h3>Honesty rules</h3>
+  <p>A lineage tool that guesses is worse than no tool. BlastRadius follows three rules:</p>
+  <ul>
+    <li><strong>Never fake precision.</strong> If a table can't be resolved (missing source, dynamic SQL), it's shown as an <em>unknown</em> node with the referenced name — not silently dropped.</li>
+    <li><strong>Ambiguity is surfaced.</strong> An unqualified column present in two joined tables links to <em>both</em> and is flagged ambiguous.</li>
+    <li><strong>Aggregates are honest.</strong> <code>count(*)</code> has no column inputs, so its lineage is empty — not invented.</li>
+  </ul>
+
+  <h3>Privacy</h3>
+  <p>Everything runs in your browser. The SQL parser is vendored locally (<code>node-sql-parser</code>), there are no CDNs, no analytics, no network calls. Your warehouse schema never leaves your machine.</p>
+
+  <h3>Try it</h3>
+  <p>Click <strong>Try the demo project</strong> on the <a href="index.html">analyzer</a>: an 8-node dbt project with renames, a CTE, joins, expressions, and a <code>SELECT *</code>. Pick <code>mart_vip_customers</code> → <code>total_spent</code> and watch the blast radius light up.</p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><strong>BlastRadius</strong> — column-level lineage in your browser.</p>
+  </div>
+</footer>
+</body>
+</html>
