@@ -177,7 +177,18 @@
         if (d < best) { best = d; hits.length = 0; }
         hits.push(...s.columns.get(colN));
       }
-      if (hits.length || best !== Infinity) return { inputs: hits, found: true, ambiguous: hits.length > 1 };
+      if (hits.length || best !== Infinity) {
+        // same column via duplicate scope entries (e.g. a CTE referenced in FROM)
+        // is one lineage, not ambiguity — dedupe before judging.
+        const seenH = new Set();
+        const uniq = hits.filter((h) => {
+          const k = (h.nodeId || '?') + '::' + norm(h.column);
+          if (seenH.has(k)) return false;
+          seenH.add(k);
+          return true;
+        });
+        return { inputs: uniq, found: true, ambiguous: uniq.length > 1 };
+      }
       // fall back: any starUnknown scope could provide it — mark unknown explicitly,
       // keeping the requested column name and the candidate table label.
       const fb = [];
@@ -197,8 +208,11 @@
       const ctes = Array.isArray(ast.with) ? ast.with : [];
       for (const cte of ctes) {
         const cteName = cte.name && cte.name.value ? norm(cte.name.value) : null;
-        if (!cteName || !cte.stmt || !cte.stmt.ast) continue;
-        const inner = analyzeSelect(cte.stmt.ast, outerScopes.concat(scopes), project, parser, true, depth + 1);
+        // node-sql-parser CTE shape varies by dialect: bigquery wraps the
+        // inner select as { ast: <select> }, others put the select directly.
+        const cteStmt = cte.stmt && cte.stmt.ast ? cte.stmt.ast : cte.stmt;
+        if (!cteName || !cteStmt || cteStmt.type !== 'select') continue;
+        const inner = analyzeSelect(cteStmt, outerScopes.concat(scopes), project, parser, true, depth + 1);
         const columns = new Map();
         for (const oc of inner.outputs) columns.set(norm(oc.name), oc.inputs);
         scopes.push({ alias: cteName, nodeId: null, tableLabel: cteName, columns, starUnknown: false, isCte: true, depth });
@@ -215,8 +229,9 @@
             tableLabel: f.as || 'subquery', columns, starUnknown: false, isSubquery: true, depth,
           });
         } else if (f.table) {
-          // CTE reference?
-          const cteHit = scopes.find((s) => s.isCte && s.alias === norm(f.table));
+          // CTE reference? CTEs are visible to later CTEs, the main query,
+          // and nested subqueries — so search outer scopes too (local first).
+          const cteHit = scopes.concat(outerScopes).find((s) => s.isCte && s.alias === norm(f.table));
           if (cteHit) {
             scopes.push({ alias: norm(f.as || f.table), nodeId: null, tableLabel: f.table, columns: cteHit.columns, starUnknown: false, isCte: true, depth });
           } else {
@@ -457,17 +472,34 @@
         });
         if (!project.nameIndex.has(norm(base))) project.nameIndex.set(norm(base), id);
       }
-      // pre-scan: collect every table referenced so unknown nodes exist before lineage build
+      // pre-scan: collect every table referenced so unknown nodes exist before lineage build.
+      // Skips column qualifiers (column_ref.table, e.g. the "o" in o.amount_cents)
+      // and CTE names — neither are real tables.
       const parser = new ParserClass();
       for (const [id, node] of project.nodes) {
         if (node.kind !== 'model') continue;
         try {
           const ast = parser.parse(node.compiledSql, { database: dialect || 'bigquery' }).ast;
+          const cteNames = new Set();
+          (function collectCtes(n) {
+            if (!n || typeof n !== 'object') return;
+            if (Array.isArray(n)) return n.forEach(collectCtes);
+            for (const cte of (Array.isArray(n.with) ? n.with : [])) {
+              const nm = cte.name && cte.name.value ? norm(cte.name.value) : null;
+              if (nm) cteNames.add(nm);
+            }
+            for (const k of Object.keys(n)) {
+              if (k === 'tableList' || k === 'columnList') continue;
+              collectCtes(n[k]);
+            }
+          })(ast);
           const tables = new Set();
           (function walk(n) {
             if (!n || typeof n !== 'object') return;
             if (Array.isArray(n)) return n.forEach(walk);
-            if (n.table && typeof n.table === 'string') tables.add([n.db, n.table].filter(Boolean).join('.'));
+            if (n.table && typeof n.table === 'string' && !('column' in n) && !cteNames.has(norm(n.table))) {
+              tables.add([n.db, n.table].filter(Boolean).join('.'));
+            }
             for (const k of Object.keys(n)) {
               if (k === 'tableList' || k === 'columnList') continue;
               walk(n[k]);
