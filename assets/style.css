@@ -161,3 +161,22 @@ select, input[type="search"], input[type="text"] {
 .site-footer { border-top: 1px solid var(--line); padding: 24px 0 40px; margin-top: 20px; }
 .site-footer p { margin: 6px 0; font-size: 14px; color: var(--dim); }
 [hidden] { display: none !important; }
+
+/* Desktop app shell: each pane scrolls independently so the side panels
+   never scroll away while the graph is scrolled. Sticky alone can't do
+   this when the graph is shorter than the panels (zero stick travel). */
+@media (min-width: 1101px) {
+  #view-app {
+    display: flex; flex-direction: column;
+    height: calc(100vh - 72px); height: calc(100dvh - 72px);
+    min-height: 480px;
+  }
+  .app { flex: 1; min-height: 0; padding-bottom: 14px; }
+  .sidebar, .panel-right {
+    position: static; max-height: none; min-height: 0;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .graph-col { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .graph-wrap { flex: 1; min-height: 0; }
+  .graph-legend { flex: none; }
+}
