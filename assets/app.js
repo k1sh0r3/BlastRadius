@@ -157,8 +157,8 @@ function layoutGraph() {
   for (const [d, arr] of [...levels.entries()].sort((a, b) => a[0] - b[0])) {
     arr.sort((a, b) => shortName(a).localeCompare(shortName(b)));
     arr.forEach((n, i) => {
-      const x = PAD + d * (NW + XGAP);
-      const y = PAD + i * (NH + YGAP);
+      const x = PAD + i * (NW + YGAP);
+      const y = PAD + d * (NH + XGAP);
       pos.set(n.id, { x, y });
       maxX = Math.max(maxX, x + NW); maxY = Math.max(maxY, y + NH);
     });
@@ -179,12 +179,12 @@ function renderGraph() {
     for (const dep of (n.dependsOn || [])) {
       if (!pos.has(dep) || !pos.has(id)) continue;
       const a = pos.get(dep), b = pos.get(id);
-      const x1 = a.x + NW, y1 = a.y + NH / 2, x2 = b.x, y2 = b.y + NH / 2;
-      const mx = (x1 + x2) / 2;
+      const x1 = a.x + NW / 2, y1 = a.y + NH, x2 = b.x + NW / 2, y2 = b.y;
+      const my = (y1 + y2) / 2;
       let cls = 'gedge';
       if (inUp(dep) && inUp(id)) cls += ' up';
       else if (inBlast(dep) && inBlast(id)) cls += ' blast';
-      s += `<path class="${cls}" d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
+      s += `<path class="${cls}" d="M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}"/>`;
     }
   }
   for (const [id, n] of state.project.nodes) {
