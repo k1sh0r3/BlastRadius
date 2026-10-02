@@ -13,7 +13,7 @@ No build step. Serve the folder (it must be served over HTTP for `fetch()` of th
 demo manifest — `file://` will block that one request):
 
 ```bash
-cd ~/workspace/blast-radius
+cd BlastRadius
 python3 -m http.server 8080
 # open http://localhost:8080
 ```
@@ -30,7 +30,7 @@ assets/
   vendor/node-sql-parser.umd.js  vendored SQL parser — no CDN
   demo/manifest.json           demo dbt project (2 sources, 6 models)
 tests/
-  run.js                       node test runner (24 tests)
+  run.js                       node test runner (27 tests)
   test_*.js                    manifest parsing, lineage, blast radius, raw SQL
 ```
 
@@ -52,13 +52,12 @@ rather than a fabricated one.
 ## Tests
 
 ```bash
-cd ~/workspace/blast-radius
-NODE_PATH=/tmp/nsp-test/node_modules node tests/run.js
-# 24 passed, 0 failed
+cd BlastRadius
+node tests/run.js
+# 27 passed, 0 failed
 ```
 
-(`node-sql-parser` is a dev-only node dependency for the test runner; the
-browser uses the vendored UMD bundle.)
+(The tests load `node-sql-parser` from the vendored UMD bundle, so no `npm install` is needed.)
 
 ## Cost
 
