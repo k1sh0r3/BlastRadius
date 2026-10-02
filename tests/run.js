@@ -1,4 +1,4 @@
-/* BlastRadius test runner: node tests/run.js (needs NODE_PATH to node-sql-parser) */
+/* BlastRadius test runner: node tests/run.js */
 'use strict';
 const path = require('path');
 const files = ['test_manifest.js', 'test_lineage.js', 'test_blast.js', 'test_raw.js'];
